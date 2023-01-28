@@ -52,9 +52,9 @@ class AccountService(private val accountMapper: AccountMapper,
         return doCreateAccount(owner.username, description, minimumBalance, 0L)
     }
 
-    private fun doCreateAccount(owner: String, description: String, minimumBalance: Long, totalBalance: Long): Account {
+    private fun doCreateAccount(owner: String, description: String, minimumBalance: Long, balance: Long): Account {
         val accountID = generateAccountID()
-        val account = Account(accountID, owner, description, minimumBalance, totalBalance)
+        val account = Account(accountID, owner, description, minimumBalance, balance)
         accountMapper.insertAccount(account)
         logger.info("Created new account $account.")
         return account

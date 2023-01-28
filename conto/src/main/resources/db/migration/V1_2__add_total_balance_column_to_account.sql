@@ -1,1 +1,0 @@
-ALTER TABLE account ADD total_balance BIGINT DEFAULT 0;
