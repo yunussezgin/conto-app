@@ -26,12 +26,12 @@ class AccountService(private val accountMapper: AccountMapper,
 
     @EventListener
     fun onAdminUserCreated(event: AdminUserCreatedEvent) {
-        rootAccount = doCreateAccount(event.adminUsername, "Bank", Long.MIN_VALUE)
+        rootAccount = doCreateAccount(event.adminUsername, "Bank", Long.MIN_VALUE, 0L)
     }
 
     @EventListener
     fun onUserSignedUp(event: UserSignedUpEvent) {
-        val a = doCreateAccount(event.username, FIRST_ACCOUNT_DESCRIPTION, 0L)
+        val a = doCreateAccount(event.username, FIRST_ACCOUNT_DESCRIPTION, 0L, 0L)
         eventPublisher.publishEvent(FirstAccountCreatedEvent(this, a.owner, a.accountID))
     }
 
@@ -42,19 +42,19 @@ class AccountService(private val accountMapper: AccountMapper,
     @PreAuthorize("hasRole('ROLE_USER')")
     fun createAccount(description: String): Account {
         val username = userService.loggedInUser!!.username
-        return doCreateAccount(username, description, 0L)
+        return doCreateAccount(username, description, 0L, 0L)
     }
 
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     fun createAccount(ownerName: String, description: String, minimumBalance: Long): Account {
         // Make sure the user exists before creating the account
         val owner = userService.findByUsername(ownerName) ?: throw UsernameNotFoundException(ownerName)
-        return doCreateAccount(owner.username, description, minimumBalance)
+        return doCreateAccount(owner.username, description, minimumBalance, 0L)
     }
 
-    private fun doCreateAccount(owner: String, description: String, minimumBalance: Long): Account {
+    private fun doCreateAccount(owner: String, description: String, minimumBalance: Long, totalBalance: Long): Account {
         val accountID = generateAccountID()
-        val account = Account(accountID, owner, description, minimumBalance)
+        val account = Account(accountID, owner, description, minimumBalance, totalBalance)
         accountMapper.insertAccount(account)
         logger.info("Created new account $account.")
         return account
