@@ -35,10 +35,7 @@ class HomeController(
         val accounts = accountService.findByOwner(currentUser.username)
         mav.addObject(ACCOUNT_LIST_KEY, accounts)
 
-        logger.debug("Retrieving balances for ${accounts.size} accounts owned by user ${currentUser.username}")
-
-        val balances = accounts.associateBy { it.accountID }.mapValues { transferService.findBalance(it.key) }
-        mav.addObject(BALANCES_KEY, balances)
+        logger.debug("Retrieved ${accounts.size} accounts owned by user ${currentUser.username}")
 
         /**
          * If an accountID is provided as a GET parameter (accID), try to find it in the list of own accounts.

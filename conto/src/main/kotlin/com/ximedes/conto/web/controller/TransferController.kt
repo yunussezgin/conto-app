@@ -37,11 +37,7 @@ class TransferController(
         logger.debug("Retrieving accounts owned by user ${currentUser.username}")
         val accountsForUser = accountService.findByOwner(currentUser.username)
         model.addAttribute("userAccounts", accountsForUser)
-        logger.debug("Retrieving balances for ${accountsForUser.size} accounts owned by user ${currentUser.username}")
-        val balances = accountsForUser.groupBy(keySelector = { it.accountID }, valueTransform = {
-            transferService.findBalance(it.accountID)
-        })
-        model.addAttribute("balances", balances)
+        logger.debug("Retrieved ${accountsForUser.size} accounts owned by user ${currentUser.username}")
         logger.debug("Adding all accounts to the model")
         val allAccounts = accountService.findAllAccounts()
         model.addAttribute("allAccounts", allAccounts)

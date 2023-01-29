@@ -42,7 +42,8 @@ class TransferControllerTest {
         whenever(userService.loggedInUser).thenReturn(user)
         whenever(accountService.findByOwner(user.username)).thenReturn(ownAccounts)
         whenever(accountService.findAllAccounts()).thenReturn(allAccounts)
-        whenever(transferService.findBalance(accountIDCaptor.capture())).thenReturn(123L)
+        //TODO Refactor test cases
+        //whenever(transferService.findBalance(accountIDCaptor.capture())).thenReturn(123L)
 
         controller.populate(model)
 

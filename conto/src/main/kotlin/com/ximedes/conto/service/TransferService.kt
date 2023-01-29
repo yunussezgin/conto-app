@@ -26,27 +26,6 @@ class TransferService(
 
     private val logger = KotlinLogging.logger { }
 
-    fun findBalance(accountID: String): Long {
-        val account = accountService.findByAccountID(accountID)
-            ?: throw IllegalArgumentException("No account found with ID $accountID")
-
-        require(userService.loggedInUser.hasAccessTo(account)) {
-            "User ${userService.loggedInUser} does not have access to account $accountID"
-        }
-
-        val transfers = transferMapper.findTransfersByAccountID(accountID)
-        return transfers.sumByLong { t ->
-            if (t.creditAccountID == t.debitAccountID) {
-                // Corner case
-                0L
-            } else when (accountID) {
-                t.creditAccountID -> t.amount
-                t.debitAccountID -> -t.amount
-                else -> throw IllegalStateException("Transfer $t should be be in list of transfer for account $accountID")
-            }
-        }
-    }
-
     // TODO this can go now, right? because these are runtimes?
     @Throws(InsufficientFundsException::class, AccountNotFoundException::class)
     @PreAuthorize("isAuthenticated()")
@@ -65,9 +44,8 @@ class TransferService(
             "User ${userService.loggedInUser} does not have access to account $debitAccountID"
         }
 
-        val currentBalance = findBalance(debitAccount.accountID)
-        if (currentBalance - amount < debitAccount.minimumBalance) {
-            throw InsufficientFundsException("Insufficient funds for transferring $amount from account ${debitAccount.accountID} with balance $currentBalance")
+        if (debitAccount.balance - amount < debitAccount.minimumBalance) {
+            throw InsufficientFundsException("Insufficient funds for transferring $amount from account ${debitAccount.accountID} with balance ${debitAccount.balance}")
         }
 
         return Transfer(debitAccount.accountID, creditAccount.accountID, amount, description).also {

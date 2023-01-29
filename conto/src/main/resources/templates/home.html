@@ -40,7 +40,7 @@
                             </td>
                             <td th:id="'th-balance-id-' + ${acc.accountID}"
                                 th:style="'text-align: right; vertical-align: middle;'"
-                                th:text="${#numbers.formatInteger(balances[acc.accountID], 1, 'POINT')}">
+                                th:text="${#numbers.formatInteger(acc.balance, 1, 'POINT')}">
                                 123
                             </td>
                         </tr>
