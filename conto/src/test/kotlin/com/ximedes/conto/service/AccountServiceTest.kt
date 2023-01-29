@@ -2,6 +2,7 @@ package com.ximedes.conto.service
 
 import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.times
 import com.nhaarman.mockitokotlin2.whenever
 import com.ximedes.conto.AccountBuilder
 import com.ximedes.conto.UserBuilder
@@ -108,6 +109,41 @@ class AccountServiceTest {
         val accountList = AccountBuilder.build(4)
         whenever(accountMapper.find(criteriaCaptor.capture())).thenReturn(accountList)
         assertSame(accountList.first(), accountService.findByAccountID("whatever"))
+    }
+
+    @Test
+    fun `it throws an exception when using a non-existing account`() {
+        whenever(accountMapper.find(AccountCriteria(null, "foo"))).thenReturn(emptyList())
+        whenever(accountMapper.find(AccountCriteria(null, "bar"))).thenReturn(listOf(AccountBuilder.build { accountID = "bar" }))
+
+        org.junit.jupiter.api.assertThrows<AccountNotAvailableException> {
+            accountService.onTransferCreated(TransferCreatedEvent(this, "foo", "bar", 100L))
+        }
+    }
+
+    @Test
+    fun `it knows how to calculate balance from credit and debit transactions`() {
+        val user = UserBuilder.build()
+        whenever(userService.loggedInUser).thenReturn(user)
+
+        val (accountA, accountB, accountC) = AccountBuilder.build(3) {
+            owner = user.username
+            balance = 100L
+        }
+
+        whenever(accountMapper.find(AccountCriteria(null, accountA.accountID))).thenReturn(listOf(accountA))
+        whenever(accountMapper.find(AccountCriteria(null, accountB.accountID))).thenReturn(listOf(accountB))
+        whenever(accountMapper.find(AccountCriteria(null, accountC.accountID))).thenReturn(listOf(accountC))
+
+        accountService.onTransferCreated(TransferCreatedEvent(this, accountA.accountID, accountB.accountID, 50L))
+        accountService.onTransferCreated(TransferCreatedEvent(this, accountB.accountID, accountC.accountID, 25L))
+
+        com.nhaarman.mockitokotlin2.verify(accountMapper, times(4)).updateAccount(accountCaptor.capture())
+
+        assertEquals(50L, accountCaptor.allValues[0].balance)
+        assertEquals(150L, accountCaptor.allValues[1].balance)
+        assertEquals(75L, accountCaptor.allValues[2].balance)
+        assertEquals(125L, accountCaptor.allValues[3].balance)
     }
 
 }

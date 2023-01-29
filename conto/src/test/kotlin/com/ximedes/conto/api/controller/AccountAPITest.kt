@@ -8,7 +8,6 @@ import com.ximedes.conto.service.AccountService
 import com.ximedes.conto.service.TransferService
 import com.ximedes.conto.service.UserService
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class AccountAPITest {
@@ -33,11 +32,11 @@ class AccountAPITest {
         val user = UserBuilder.build()
         val account = AccountBuilder.build {
             owner = user.username
+            balance = 543L
         }
 
         whenever(userService.loggedInUser).thenReturn(user)
         whenever(accountService.findAllAccounts()).thenReturn(listOf(account))
-        whenever(transferService.findBalance(account.accountID)).thenReturn(543L)
 
         val response = api.findAccounts()
 
@@ -58,12 +57,12 @@ class AccountAPITest {
         val b = AccountBuilder.build {
             owner = user.username
             minimumBalance = -999L
+            balance = 1234L
         }
         val c = AccountBuilder.build()
 
         whenever(userService.loggedInUser).thenReturn(user)
         whenever(accountService.findAllAccounts()).thenReturn(listOf(a, b, c))
-        whenever(transferService.findBalance(b.accountID)).thenReturn(1234L)
 
         val response = api.findAccounts()
         val accounts = response.body!!

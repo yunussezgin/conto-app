@@ -1,9 +1,6 @@
 package com.ximedes.conto.web
 
-import com.nhaarman.mockitokotlin2.argumentCaptor
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.verify
-import com.nhaarman.mockitokotlin2.whenever
+import com.nhaarman.mockitokotlin2.*
 import com.ximedes.conto.AccountBuilder
 import com.ximedes.conto.TransferBuilder
 import com.ximedes.conto.TransferFormBuilder
@@ -26,7 +23,6 @@ class TransferControllerTest {
     val transferService = mock<TransferService>()
     val bindingResult = mock<BindingResult>()
     val model = mock<Model>()
-    val accountIDCaptor = argumentCaptor<String>()
     val controller = TransferController(userService, accountService, transferService)
 
     @Test
@@ -34,23 +30,18 @@ class TransferControllerTest {
         val user = UserBuilder.build()
         val ownAccounts = AccountBuilder.build(3) {
             owner = user.username
+            balance = 100L
         }
         val allAccounts = ownAccounts + AccountBuilder.build(7) {
             owner = " anotheruser"
+            balance = 50L
         }
 
         whenever(userService.loggedInUser).thenReturn(user)
         whenever(accountService.findByOwner(user.username)).thenReturn(ownAccounts)
         whenever(accountService.findAllAccounts()).thenReturn(allAccounts)
-        //TODO Refactor test cases
-        //whenever(transferService.findBalance(accountIDCaptor.capture())).thenReturn(123L)
 
         controller.populate(model)
-
-        val capturedIDs = accountIDCaptor.allValues
-        // It should only have retrieved balances for own accounts
-        assertEquals(ownAccounts.size, capturedIDs.size)
-        assertEquals(ownAccounts.map { it.accountID }.toSet(), capturedIDs.toSet())
 
         verify(model).addAttribute("userAccounts", ownAccounts)
         verify(model).addAttribute("allAccounts", allAccounts)

@@ -1,9 +1,6 @@
 package com.ximedes.conto.service
 
-import com.nhaarman.mockitokotlin2.argumentCaptor
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.verify
-import com.nhaarman.mockitokotlin2.whenever
+import com.nhaarman.mockitokotlin2.*
 import com.ximedes.conto.AccountBuilder
 import com.ximedes.conto.TransferBuilder
 import com.ximedes.conto.UserBuilder
@@ -31,18 +28,14 @@ class TransferServiceTest {
         whenever(userService.loggedInUser).thenReturn(user)
         whenever(userService.findByUsername(user.username)).thenReturn(user)
 
+        // Balance is 150, so should succeed
         val debitAccount = AccountBuilder.build {
             owner = user.username
+            balance = 150L
         }
         val creditAccount = AccountBuilder.build()
         whenever(accountService.findByAccountID(debitAccount.accountID)).thenReturn(debitAccount)
         whenever(accountService.findByAccountID(creditAccount.accountID)).thenReturn(creditAccount)
-
-        // Balance is 150, so should succeed
-        whenever(transferMapper.findTransfersByAccountID(debitAccount.accountID)).thenReturn(listOf(TransferBuilder.build {
-            creditAccountID = debitAccount.accountID
-            amount = 150
-        }))
 
         val t = transferService.attemptTransfer(debitAccount.accountID, creditAccount.accountID, 100, "desc")
         verify(transferMapper).insertTransfer(t)
@@ -53,10 +46,8 @@ class TransferServiceTest {
         assertEquals("desc", t.description)
 
         // Balance is 50, so should fail
-        whenever(transferMapper.findTransfersByAccountID(debitAccount.accountID)).thenReturn(listOf(TransferBuilder.build {
-            creditAccountID = debitAccountID
-            amount = 50
-        }))
+        val updatedDebitAccount = debitAccount.copy(balance = 50)
+        whenever(accountService.findByAccountID(debitAccount.accountID)).thenReturn(updatedDebitAccount)
 
         assertThrows<InsufficientFundsException> {
             transferService.attemptTransfer(debitAccount.accountID, creditAccount.accountID, 100, "desc")
@@ -91,8 +82,10 @@ class TransferServiceTest {
             role = Role.ADMIN
         }
 
+        // Balance is 50 on debit account
         val debitAccount = AccountBuilder.build {
             owner = "not_admin"
+            balance = 50
         }
 
         val creditAccount = AccountBuilder.build()
@@ -101,12 +94,6 @@ class TransferServiceTest {
         whenever(userService.findByUsername(admin.username)).thenReturn(admin)
         whenever(accountService.findByAccountID(debitAccount.accountID)).thenReturn(debitAccount)
         whenever(accountService.findByAccountID(creditAccount.accountID)).thenReturn(creditAccount)
-
-        // Balance is 50 on debit account
-        whenever(transferMapper.findTransfersByAccountID(debitAccount.accountID)).thenReturn(listOf(TransferBuilder.build {
-            creditAccountID = debitAccount.accountID
-            amount = 50
-        }))
 
         val t = transferService.attemptTransfer(debitAccount.accountID, creditAccount.accountID, 10, "desc")
         verify(transferMapper).insertTransfer(t)
@@ -159,41 +146,6 @@ class TransferServiceTest {
     }
 
     @Test
-    fun `it knows how to calculate balance from credit and debit transactions`() {
-        val user = UserBuilder.build()
-        whenever(userService.loggedInUser).thenReturn(user)
-
-        val (accountA, accountB, accountC) = AccountBuilder.build(3) {
-            owner = user.username
-        }
-        whenever(accountService.findByAccountID(accountA.accountID)).thenReturn(accountA)
-        whenever(accountService.findByAccountID(accountB.accountID)).thenReturn(accountB)
-        whenever(accountService.findByAccountID(accountC.accountID)).thenReturn(accountC)
-
-        val txAtoB = (1..100).map {
-            TransferBuilder.build {
-                debitAccountID = accountA.accountID
-                creditAccountID = accountB.accountID
-                amount = 3
-            }
-        }
-        val txBtoC = (1..75).map {
-            TransferBuilder.build {
-                debitAccountID = accountB.accountID
-                creditAccountID = accountC.accountID
-                amount = 1
-            }
-        }
-        whenever(transferMapper.findTransfersByAccountID(accountA.accountID)).thenReturn(txAtoB)
-        whenever(transferMapper.findTransfersByAccountID(accountB.accountID)).thenReturn(txAtoB + txBtoC)
-        whenever(transferMapper.findTransfersByAccountID(accountC.accountID)).thenReturn(txBtoC)
-
-        assertEquals(-300, transferService.findBalance(accountA.accountID))
-        assertEquals(225, transferService.findBalance(accountB.accountID))
-        assertEquals(75, transferService.findBalance(accountC.accountID))
-    }
-
-    @Test
     fun `on receiving a FirstAccountCreatedEvent the account is credited with the signup bonus from the root account`() {
         whenever(accountService.rootAccount).thenReturn(AccountBuilder.build { accountID = "root" })
         transferService.onFirstAccountCreated(FirstAccountCreatedEvent(this, "owner", "account"))
@@ -209,9 +161,6 @@ class TransferServiceTest {
     fun `it throws an exception when using a non-existing account`() {
         whenever(accountService.findByAccountID("foo")).thenReturn(null)
         whenever(accountService.findByAccountID("bar")).thenReturn(AccountBuilder.build { accountID = "bar" })
-        assertThrows<IllegalArgumentException> {
-            transferService.findBalance("foo")
-        }
 
         assertThrows<AccountNotAvailableException> {
             transferService.attemptTransfer("foo", "bar", 1, "desc")
@@ -224,19 +173,6 @@ class TransferServiceTest {
         assertThrows<AccountNotAvailableException> {
             transferService.findTransfersByAccountID("foo")
         }.also { assertEquals(UNKNOWN, it.type) }
-    }
-
-    @Test
-    fun `it throws an exception when finding the balance of an account of which the current user is not the owner or the admin`() {
-        whenever(accountService.findByAccountID("foo")).thenReturn(AccountBuilder.build {
-            owner = "owner"
-        })
-        whenever(userService.loggedInUser).thenReturn(UserBuilder.build {
-            username = "notowner"
-        })
-        assertThrows<IllegalArgumentException> {
-            transferService.findBalance("foo")
-        }
     }
 
 }
