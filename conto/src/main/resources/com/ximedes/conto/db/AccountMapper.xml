@@ -40,7 +40,8 @@
         UPDATE account
         SET description = #{description},
         owner = #{owner},
-        minimum_balance = #{minimumBalance}
+        minimum_balance = #{minimumBalance},
+        balance = #{balance}
         WHERE account_id = #{accountID}
     </update>
 

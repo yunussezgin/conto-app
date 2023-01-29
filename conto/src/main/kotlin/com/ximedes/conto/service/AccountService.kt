@@ -69,5 +69,17 @@ class AccountService(private val accountMapper: AccountMapper,
 
     fun findByOwner(user: String) = accountMapper.find(AccountCriteria(ownerID = user))
 
-
+    @EventListener
+    fun onTransferCreated(event: TransferCreatedEvent) {
+        val debitAccount = findByAccountID(event.debitAccountID)
+            ?: throw AccountNotAvailableException(AccountNotAvailableException.Type.DEBIT, "Debit account with ID ${event.debitAccountID} not found.")
+        val updatedDebitAccount = debitAccount.copy(balance = debitAccount.balance - event.amount)
+        accountMapper.updateAccount(updatedDebitAccount)
+        logger.info { "Debit account ${event.debitAccountID} transferred ${event.amount} updated with ${debitAccount.balance - event.amount}" }
+        val creditAccount = findByAccountID(event.creditAccountID)
+            ?: throw AccountNotAvailableException(AccountNotAvailableException.Type.CREDIT, "Credit account with ID ${event.creditAccountID} not found.")
+        val updatedCreditAccount = creditAccount.copy(balance = creditAccount.balance + event.amount)
+        accountMapper.updateAccount(updatedCreditAccount)
+        logger.info { "Credit account ${event.creditAccountID} transferred ${event.amount} updated with ${creditAccount.balance + event.amount}" }
+    }
 }

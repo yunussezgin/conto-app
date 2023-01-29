@@ -1,1 +1,1 @@
-ALTER TABLE account ADD balance BIGINT DEFAULT 0;
+ALTER TABLE account ADD balance BIGINT NOT NULL;

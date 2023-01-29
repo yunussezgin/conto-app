@@ -13,14 +13,16 @@ import com.ximedes.conto.domain.AccountNotAvailableException.Type.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.springframework.context.ApplicationEventPublisher
 
 class TransferServiceTest {
 
     val userService = mock<UserService>()
     val accountService = mock<AccountService>()
     val transferMapper = mock<TransferMapper>()
+    val publisher = mock<ApplicationEventPublisher>()
 
-    val transferService = TransferService(userService, accountService, transferMapper)
+    val transferService = TransferService(userService, accountService, transferMapper, publisher)
     val transferCaptor = argumentCaptor<Transfer>()
 
     @Test

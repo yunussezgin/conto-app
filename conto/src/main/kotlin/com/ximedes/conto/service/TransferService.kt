@@ -5,6 +5,7 @@ import com.ximedes.conto.domain.*
 import com.ximedes.conto.domain.AccountNotAvailableException.Type.*
 import com.ximedes.conto.sumByLong
 import mu.KotlinLogging
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Service
@@ -19,7 +20,8 @@ const val SIGNUP_BONUS = 100L;
 class TransferService(
     private val userService: UserService,
     private val accountService: AccountService,
-    private val transferMapper: TransferMapper
+    private val transferMapper: TransferMapper,
+    private val eventPublisher: ApplicationEventPublisher
 ) {
 
     private val logger = KotlinLogging.logger { }
@@ -70,6 +72,7 @@ class TransferService(
 
         return Transfer(debitAccount.accountID, creditAccount.accountID, amount, description).also {
             transferMapper.insertTransfer(it)
+            eventPublisher.publishEvent(TransferCreatedEvent(this, debitAccount.accountID, creditAccount.accountID, amount))
         }
 
     }
@@ -90,6 +93,7 @@ class TransferService(
         logger.info { "Granting signup bonus to owner ${event.owner} of new first account ${event.accountID}" }
         val t = Transfer(accountService.rootAccount.accountID, event.accountID, SIGNUP_BONUS, "Welcome to Conto!")
         transferMapper.insertTransfer(t)
+        eventPublisher.publishEvent(TransferCreatedEvent(this, accountService.rootAccount.accountID, event.accountID, SIGNUP_BONUS))
     }
 
 }
